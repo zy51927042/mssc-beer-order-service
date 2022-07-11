@@ -6,6 +6,7 @@ import guru.sfg.beer.order.service.domain.BeerOrderStatusEnum;
 import guru.sfg.beer.order.service.repositories.BeerOrderRepository;
 import guru.sfg.brewery.model.BeerOrderDto;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.statemachine.StateMachine;
@@ -14,10 +15,12 @@ import org.springframework.statemachine.support.DefaultStateMachineContext;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class BeerOrderManagerImpl implements BeerOrderManager {
 
     public static final String ORDER_ID_HEADER = "ORDER_ID_HEADER";
@@ -38,16 +41,20 @@ public class BeerOrderManagerImpl implements BeerOrderManager {
     }
 
     @Override
+    @Transactional
     public void processValidationResult(UUID beerOrderId, Boolean isValid) {
-        BeerOrder beerOrder = beerOrderRepository.findById(beerOrderId).get();
-        if (isValid){
-            sendBeerOrderEvent(beerOrder,BeerOrderEventEnum.VALIDATION_PASSED);
+        Optional<BeerOrder> beerOrderOptional = beerOrderRepository.findById(beerOrderId);
+        beerOrderOptional.ifPresentOrElse(beerOrder -> {
+            if (isValid){
+                sendBeerOrderEvent(beerOrder,BeerOrderEventEnum.VALIDATION_PASSED);
 
-            BeerOrder validateOrder = beerOrderRepository.findOneById(beerOrderId);
-            sendBeerOrderEvent(validateOrder,BeerOrderEventEnum.ALLOCATE_ORDER);
-        }else {
-            sendBeerOrderEvent(beerOrder,BeerOrderEventEnum.VALIDATION_FAILED);
-        }
+                BeerOrder validateOrder = beerOrderRepository.findById(beerOrderId).get();
+                sendBeerOrderEvent(validateOrder,BeerOrderEventEnum.ALLOCATE_ORDER);
+            }else {
+                sendBeerOrderEvent(beerOrder,BeerOrderEventEnum.VALIDATION_FAILED);
+            }
+        },() -> log.error("Order Not Found Id:"+ beerOrderId));
+
 
     }
 
