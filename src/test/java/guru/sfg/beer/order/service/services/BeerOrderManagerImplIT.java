@@ -133,6 +133,23 @@ class BeerOrderManagerImplIT {
         assertEquals(BeerOrderStatusEnum.PICKED_UP, pickedUpOrder.getOrderStatus());
 
     }
+    @Test
+    void testFailedValidation() throws JsonProcessingException {
+        BeerDto beerDto = BeerDto.builder().id(beerId).upc("0631234200036").build();
+        //BeerPagedList list = new BeerPagedList(Arrays.asList(beerDto));
+        wireMockServer.stubFor(WireMock.get(BeerServiceImpl.BEER_UPC_PATH_V1 + "0631234200036")
+                .willReturn(okJson(objectMapper.writeValueAsString(beerDto))));
+        BeerOrder beerOrder = createBeerOrder();
+        beerOrder.setCustomerRef("fail-validation");
+        BeerOrder savedBeerOrder = beerOrderManager.newBeerOrder(beerOrder);
+
+        await().untilAsserted( ()-> {
+            BeerOrder foundOrder = beerOrderRepository.findById(beerOrder.getId()).get();
+
+            assertEquals(BeerOrderStatusEnum.VALIDATION_EXCEPTION, foundOrder.getOrderStatus());
+
+        });
+    }
     public BeerOrder createBeerOrder() {
         BeerOrder beerOrder = BeerOrder.builder()
                 .customer(testCustomer)
