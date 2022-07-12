@@ -17,14 +17,32 @@ public class BeerOrderAllocationListener {
 
     @JmsListener(destination = JmsConfig.ALLOCATE_ORDER_QUEUE)
     public void listen(Message msg) {
+        Boolean isError = false;
+        Boolean isPending = false;
         AllocateOrderRequest request = (AllocateOrderRequest) msg.getPayload();
-        request.getBeerOrderDto().getBeerOrderLines().forEach( beerOrderLineDto -> {
-            beerOrderLineDto.setQuantityAllocated(beerOrderLineDto.getOrderQuantity());
+
+        if (request.getBeerOrderDto().getCustomerRef() != null) {
+            if (request.getBeerOrderDto().getCustomerRef().equals("fail-allocation")) {
+                isError = true;
+            }
+            if (request.getBeerOrderDto().getCustomerRef().equals("pending-allocation")) {
+                isPending = true;
+            }
+        }
+        Boolean finalPendingInventory = isPending;
+        request.getBeerOrderDto().getBeerOrderLines().forEach(beerOrderLineDto -> {
+            if(finalPendingInventory){
+                beerOrderLineDto.setQuantityAllocated(beerOrderLineDto.getOrderQuantity()-1);
+            }else {
+                beerOrderLineDto.setQuantityAllocated(beerOrderLineDto.getOrderQuantity());
+            }
+
         });
+
         jmsTemplate.convertAndSend(JmsConfig.ALLOCATE_ORDER_RESULT_QUEUE,
                 AllocateOrderResult.builder()
-                        .allocationError(false)
-                        .pendingInventory(false)
+                        .allocationError(isError)
+                        .pendingInventory(isPending)
                         .beerOrderDto(request.getBeerOrderDto())
                         .build());
     }
