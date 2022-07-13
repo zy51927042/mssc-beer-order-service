@@ -8,6 +8,7 @@ import guru.sfg.brewery.model.BeerOrderDto;
 import guru.sfg.brewery.model.BeerOrderLineDto;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
@@ -15,7 +16,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.UUID;
 
-//@Service
+@Service
 @Slf4j
 public class TastingRoomService {
 
@@ -45,6 +46,7 @@ public class TastingRoomService {
             doPlaceOrder(customerList.get(0));
         } else {
             log.error("Too many or too few tasting room customers found");
+            customerList.forEach(customer -> log.debug(customer.toString()));
         }
     }
 
