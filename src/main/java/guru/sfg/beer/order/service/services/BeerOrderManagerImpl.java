@@ -43,11 +43,17 @@ public class BeerOrderManagerImpl implements BeerOrderManager {
     }
 
     @Override
-    @Transactional
+    //@Transactional
     public void processValidationResult(UUID beerOrderId, Boolean isValid) {
+        //new to pending too quickly add wait for status change
+        awaitForStatus(beerOrderId, BeerOrderStatusEnum.VALIDATION_PENDING);
+        log.debug("Process Validation Result for beerOrderId " + beerOrderId +"Valid :" + isValid);
+
         Optional<BeerOrder> beerOrderOptional = beerOrderRepository.findById(beerOrderId);
         beerOrderOptional.ifPresentOrElse(beerOrder -> {
             if (isValid){
+
+
                 sendBeerOrderEvent(beerOrder,BeerOrderEventEnum.VALIDATION_PASSED);
 
                 //wait for status change
@@ -58,7 +64,7 @@ public class BeerOrderManagerImpl implements BeerOrderManager {
             }else {
                 sendBeerOrderEvent(beerOrder,BeerOrderEventEnum.VALIDATION_FAILED);
             }
-        },() -> log.error("Order Not Found Id:"+ beerOrderId));
+        },() -> log.error("V Order Not Found Id:"+ beerOrderId));
 
 
     }
